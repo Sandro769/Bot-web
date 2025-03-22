@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>BotEury Web</title>
+  <!-- Inclui Chart.js via CDN para o gráfico -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      margin: 0;
+      background: url('C:/Users/sl925/log/1.jpg') center center / cover no-repeat;
+      font-family: Arial, sans-serif;
+      color: white;
+    }
+    .container {
+      width: 500px;
+      margin: 50px auto;
+      background: rgba(0,0,0,0.6);
+      padding: 20px;
+      border-radius: 15px;
+    }
+    .center {
+      text-align: center;
+    }
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 15px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .btn-account {
+      background-color: orange;
+      color: white;
+    }
+    .btn-account:hover {
+      background-color: darkorange;
+    }
+    .btn-start {
+      background-color: #00CC66;
+      color: white;
+    }
+    .btn-start:hover {
+      background-color: #00B359;
+    }
+    .btn-swap {
+      background-color: #555555;
+      color: white;
+    }
+    .btn-swap:hover {
+      background-color: #444444;
+    }
+    /* Ícones: 🗑️⚙️📊 centralizados */
+    .icons {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+    .icons button {
+      background: transparent;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 0 10px;
+    }
+    /* Tabela de operações */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid #444;
+      padding: 8px;
+      text-align: center;
+      background: rgba(30,30,30,0.8);
+      font-size: 12px;
+    }
+    th {
+      background-color: #333;
+    }
+    /* Progress Indicator */
+    .progress-indicator {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 20px 0;
+    }
+    .progress-indicator .line {
+      width: 50px;
+      height: 2px;
+      background-color: white;
+    }
+    .progress-indicator .circle {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background-color: white;
+      display: inline-block;
+    }
+    .progress-indicator .circle.green { background-color: green; }
+    .progress-indicator .circle.yellow { background-color: yellow; }
+    .progress-indicator .circle.red { background-color: red; }
+    /* Modais (config e conta) */
+    .modal {
+      display: none; 
+      position: fixed; 
+      z-index: 1000; 
+      left: 0; top: 0; width: 100%; height: 100%;
+      overflow: auto; 
+      background-color: rgba(0,0,0,0.8);
+    }
+    .modal-content {
+      background-color: #1E1E1E;
+      margin: 15% auto;
+      padding: 20px;
+      border-radius: 10px;
+      width: 300px;
+      color: white;
+    }
+    .modal-content input {
+      width: 100%;
+      padding: 5px;
+      margin: 5px 0;
+      font-size: 16px;
+      border: 1px solid #444;
+      border-radius: 5px;
+      background-color: #333;
+      color: white;
+    }
+    .modal-content .modal-buttons {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Botão de Conta e Informações -->
+    <div class="center">
+      <button id="accountButton" class="btn btn-account">Conta Real - 0.00 USD</button>
+    </div>
+    <div class="center" style="margin-top:10px;">
+      <div id="profitLabel" style="font-size:22px;">Lucro/Prejuízo</div>
+      <div id="profitValue" style="font-size:28px; font-weight:bold; color:#00FF00;">00.00</div>
+    </div>
+    <!-- Progress Indicator -->
+    <div class="progress-indicator" id="progressIndicator">
+      <span class="circle green"></span>
+      <span class="line"></span>
+      <span class="circle red"></span>
+      <span class="line"></span>
+      <span class="circle red"></span>
+    </div>
+    <!-- Botões de Controle -->
+    <div class="center" style="margin:20px 0;">
+      <button id="swapButton" class="btn btn-swap" style="width:140px;">Trocar</button>
+      <button id="startButton" class="btn btn-start" style="width:140px;">Iniciar</button>
+    </div>
+    <!-- Ícones (centralizados) -->
+    <div class="icons">
+      <button id="trashButton">🗑️</button>
+      <button id="configButton">⚙️</button>
+      <button id="chartButton">📊</button>
+    </div>
+    <!-- Tabela de Operações -->
+    <table id="operationsTable">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Preço</th>
+          <th>Resultado</th>
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Modal de Configurações -->
+  <div id="configModal" class="modal">
+    <div class="modal-content">
+      <h3 style="text-align:center;">Configurações</h3>
+      <input type="text" id="inputValue" placeholder="Valor de Entrada">
+      <input type="text" id="stopLoss" placeholder="Valor de Stop Loss">
+      <input type="text" id="stopWin" placeholder="Valor de Stop Win">
+      <div class="modal-buttons">
+        <button id="configConfirm" class="btn" style="background-color:#00CC66;">✅</button>
+        <button id="configCancel" class="btn" style="background-color:#FF4444;">❌</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Seleção de Conta -->
+  <div id="accountModal" class="modal">
+    <div class="modal-content">
+      <h3 style="text-align:center;">Seleção de Conta</h3>
+      <div id="accountMessage" style="text-align:center; margin-bottom:10px;"></div>
+      <div class="modal-buttons">
+        <button id="accountConfirm" class="btn" style="background-color:#00CC66;">✅</button>
+        <button id="accountCancel" class="btn" style="background-color:#FF4444;">❌</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Gráfico -->
+  <div id="chartModal" class="modal">
+    <div class="modal-content" style="width:400px; height:300px;">
+      <h3 class="center">Gráfico de Distribuição</h3>
+      <canvas id="chartCanvas" width="400" height="200" style="background-color:#f4f4f4; border-radius:10px;"></canvas>
+      <div class="center" style="margin-top:10px;">
+        <button id="chartClose" class="btn" style="background-color:#FF4444;">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Configuração de API
+    const REAL_API_TOKEN = "wI47V8q7QqxnFL0";
+    const DEMO_API_TOKEN = "o7zwtrKf9H0jZ2t";
+    const APP_ID = "69871";
+
+    // Variáveis de estado (simulando o código original)
+    let currentAccount = "real";
+    let realToken = REAL_API_TOKEN;
+    let demoToken = DEMO_API_TOKEN;
+    let realBalance = 0.0, demoBalance = 0.0;
+    let wins = 0, losses = 0, totalOps = 0;
+    let botRunning = false;
+    let selectedBot = "Enenodd";
+    let configValues = { entrada: "0.35", stop_loss: "9999999", stop_win: "9999999" };
+    let tradeCycle = ["even", "even", "odd", "odd"];
+    let tradeIndex = 0;
+    let baseStake = 0.35;
+    let currentStake = baseStake;
+    let martingaleLoss = 0.0;
+    let desiredProfit = 0.02;
+    let payout = 0.63;
+    let waitingForResult = false;
+    let lastTradeContractType = null;
+    let lastTradeStake = null;
+    let tickCounts = new Array(10).fill(0);
+    let lastTradeTime = null;
+    let ws;
+
+    // Referências aos elementos
+    const accountButton = document.getElementById("accountButton");
+    const profitValue = document.getElementById("profitValue");
+    const swapButton = document.getElementById("swapButton");
+    const startButton = document.getElementById("startButton");
+    const operationsTable = document.getElementById("operationsTable").getElementsByTagName("tbody")[0];
+    const configButton = document.getElementById("configButton");
+    const trashButton = document.getElementById("trashButton");
+    const chartButton = document.getElementById("chartButton");
+
+    const configModal = document.getElementById("configModal");
+    const configConfirm = document.getElementById("configConfirm");
+    const configCancel = document.getElementById("configCancel");
+    const inputValue = document.getElementById("inputValue");
+    const stopLoss = document.getElementById("stopLoss");
+    const stopWin = document.getElementById("stopWin");
+
+    const accountModal = document.getElementById("accountModal");
+    const accountMessage = document.getElementById("accountMessage");
+    const accountConfirm = document.getElementById("accountConfirm");
+    const accountCancel = document.getElementById("accountCancel");
+
+    const chartModal = document.getElementById("chartModal");
+    const chartClose = document.getElementById("chartClose");
+    let chartInstance;
+
+    // Função para atualizar o saldo no botão de conta
+    function updateAccountButton() {
+      if (currentAccount === "real") {
+        accountButton.textContent = `Conta Real - ${realBalance.toFixed(2)} USD`;
+      } else {
+        accountButton.textContent = `Conta Demo - ${demoBalance.toFixed(2)} USD`;
+      }
+    }
+
+    // Função para atualizar o contador de operações
+    function updateCounters() {
+      console.log(`Wins: ${wins}, Losses: ${losses}, Total Ops: ${totalOps}`);
+    }
+
+    // Função para adicionar operação na tabela
+    function addOperation(profit) {
+      const row = operationsTable.insertRow(0);
+      const timeCell = row.insertCell(0);
+      const priceCell = row.insertCell(1);
+      const resultCell = row.insertCell(2);
+      const now = new Date().toLocaleTimeString();
+      timeCell.textContent = now;
+      priceCell.textContent = (Math.random() * 100 + 1).toFixed(2);
+      resultCell.textContent = profit.toFixed(2);
+      resultCell.style.color = profit >= 0 ? "green" : "white";
+    }
+
+    // Função para atualizar o lucro/prejuízo
+    function updateProfit(profit) {
+      if (profit >= 0) {
+        profitValue.style.color = "#00FF00";
+        profitValue.textContent = profit.toFixed(2);
+      } else {
+        profitValue.style.color = "white";
+        profitValue.textContent = `-${Math.abs(profit).toFixed(2)}`;
+      }
+    }
+
+    // Simulação da conexão com a API via WebSocket
+    function connectAPI() {
+      const token = currentAccount === "real" ? realToken : demoToken;
+      console.log(`Conectado à API com a chave: ${token} e App ID: ${APP_ID}`);
+      ws = new WebSocket(`wss://ws.binaryws.com/websockets/v3?app_id=${APP_ID}`);
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ authorize: token }));
+        ws.send(JSON.stringify({ balance: 1 }));
+        ws.send(JSON.stringify({
+          proposal: 1,
+          amount: 0.35,
+          basis: "stake",
+          contract_type: "DIGITEVEN",
+          currency: "USD",
+          symbol: "R_100"
+        }));
+        console.log("Autorização enviada!");
+      };
+      ws.onmessage = (event) => {
+        const msg = event.data;
+        console.log("API:", msg);
+        try {
+          const data = JSON.parse(msg);
+          if (data.balance) {
+            const balance = parseFloat(data.balance);
+            if (currentAccount === "real") {
+              realBalance = balance;
+            } else {
+              demoBalance = balance;
+            }
+            updateAccountButton();
+          }
+          if (data.proposal && data.proposal.payout) {
+            payout = parseFloat(data.proposal.payout);
+          }
+          if (data.tick) {
+            const currentTick = data.tick.quote;
+            const now = new Date();
+            const digit = parseInt(String(currentTick).slice(-1));
+            tickCounts[digit] += 1;
+            if (botRunning) {
+              if (!waitingForResult) {
+                if (!lastTradeTime || (now - lastTradeTime) / 1000 >= 6) {
+                  executeTrade();
+                  lastTradeTime = now;
+                  waitingForResult = true;
+                }
+              } else if ((now - lastTradeTime) / 1000 >= 6) {
+                let win;
+                if (lastTradeContractType === "DIGITEVEN") {
+                  win = (digit % 2 === 0);
+                } else {
+                  win = (digit % 2 === 1);
+                }
+                processTradeResult(win);
+                waitingForResult = false;
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Erro ao processar tick:", e);
+        }
+      };
+      ws.onerror = (error) => {
+        console.error("Erro: ", error);
+      };
+      ws.onclose = () => {
+        console.log("Conexão encerrada");
+      };
+    }
+
+    // Função para enviar ordem de trade
+    function executeTrade() {
+      const tradeType = tradeCycle[tradeIndex];
+      const contractType = tradeType === "even" ? "DIGITEVEN" : "DIGITODD";
+      const orderDetails = {
+        buy: currentStake,
+        contract_type: contractType,
+        symbol: "R_100",
+        duration: 6,
+        duration_unit: "s",
+        basis: "stake",
+        currency: "USD"
+      };
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(orderDetails));
+        console.log(`Ordem enviada: ${contractType} com stake ${currentStake.toFixed(2)}`);
+      }
+      lastTradeContractType = contractType;
+      lastTradeStake = currentStake;
+      tradeIndex = (tradeIndex + 1) % tradeCycle.length;
+    }
+
+    // Função para processar o resultado do trade
+    function processTradeResult(win) {
+      if (win) {
+        console.log("Operação vencedora!");
+        currentStake = baseStake;
+        martingaleLoss = 0.0;
+        wins++;
+      } else {
+        console.log("Operação perdedora!");
+        martingaleLoss += lastTradeStake;
+        currentStake = (martingaleLoss + desiredProfit) / payout;
+        losses++;
+      }
+      totalOps++;
+      updateCounters();
+      addOperation(win ? desiredProfit : -desiredProfit);
+      updateProfit((wins - losses) * desiredProfit);
+    }
+
+    // Eventos dos botões
+    accountButton.addEventListener("click", () => {
+      accountMessage.textContent = currentAccount === "real" ? 
+        `Conta real com saldo ${realBalance.toFixed(2)} USD. Mudar para conta demo?` : 
+        `Conta demo com saldo ${demoBalance.toFixed(2)} USD. Mudar para conta real?`;
+      accountModal.style.display = "block";
+    });
+
+    accountConfirm.addEventListener("click", () => {
+      currentAccount = currentAccount === "real" ? "demo" : "real";
+      updateAccountButton();
+      accountModal.style.display = "none";
+      if(ws) ws.close();
+      connectAPI();
+    });
+    accountCancel.addEventListener("click", () => {
+      accountModal.style.display = "none";
+    });
+
+    swapButton.addEventListener("click", () => {
+      selectedBot = "Enenodd";
+      swapButton.textContent = selectedBot;
+    });
+
+    startButton.addEventListener("click", () => {
+      botRunning = !botRunning;
+      startButton.textContent = botRunning ? "Pausar" : "Iniciar";
+      startButton.style.backgroundColor = botRunning ? "red" : "#00CC66";
+    });
+
+    trashButton.addEventListener("click", () => {
+      operationsTable.innerHTML = "";
+      wins = losses = totalOps = 0;
+      updateCounters();
+    });
+
+    configButton.addEventListener("click", () => {
+      inputValue.value = configValues.entrada;
+      stopLoss.value = configValues.stop_loss;
+      stopWin.value = configValues.stop_win;
+      configModal.style.display = "block";
+    });
+
+    configConfirm.addEventListener("click", () => {
+      configValues = {
+        entrada: inputValue.value,
+        stop_loss: stopLoss.value,
+        stop_win: stopWin.value
+      };
+      configModal.style.display = "none";
+    });
+    configCancel.addEventListener("click", () => {
+      configModal.style.display = "none";
+    });
+
+    chartButton.addEventListener("click", () => {
+      chartModal.style.display = "block";
+      const ctx = document.getElementById("chartCanvas").getContext("2d");
+      if (chartInstance) chartInstance.destroy();
+      chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: Array.from({length:10}, (_, i) => i),
+          datasets: [{
+            label: 'Distribuição dos últimos ticks',
+            data: tickCounts.map(val => {
+              const total = tickCounts.reduce((a,b)=>a+b,0) || 1;
+              return (val / total)*100;
+            }),
+            backgroundColor: tickCounts.map((_,i)=>{
+              if(i===1) return 'red';
+              if(i===3) return 'teal';
+              return 'lightgray';
+            }),
+            borderColor: 'black',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          scales: {
+            y: { beginAtZero: true, max: 28, ticks: { stepSize: 4 } }
+          }
+        }
+      });
+    });
+
+    chartClose.addEventListener("click", () => {
+      chartModal.style.display = "none";
+    });
+
+    window.onload = () => {
+      connectAPI();
+      updateAccountButton();
+    };
+  </script>
+</body>
+</html>
